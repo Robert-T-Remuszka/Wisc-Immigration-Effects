@@ -1,0 +1,4 @@
+{
+    "jupyter.notebookFileRoot": "${workspaceFolder}/code",
+    "python.envFile": "${workspaceFolder}/.env"
+}
