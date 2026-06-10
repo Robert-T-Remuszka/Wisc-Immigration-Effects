@@ -1,1 +1,1 @@
-Paths = {'data' : '../data'}
+Paths = {'data' : '../data', 'CensusEx' : '../data/IpumsExtracts/Decadal'}
