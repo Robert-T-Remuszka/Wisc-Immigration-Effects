@@ -1,4 +1,4 @@
-# %% Import some stuff
+# %% ################################ Import some stuff ################################
 import re
 import pandas as pd
 from ipumspy import IpumsApiClient, MicrodataExtract, readers, ddi
@@ -9,10 +9,15 @@ from pathlib import Path
 
 ExtractsDir = Path(P['CensusEx'])
 
+# %% ################################ ONLY RUN THIS SECTION IF YOU NEED TO EDIT THE ORIGINAL EXTRACTS ################################
+
 # Connect to API
 ipums = IpumsApiClient(ApiKeys['IPUMS'])
 
-# %%
+# Clear any previous extract files before re-running
+for f in ExtractsDir.glob('*.xml'): f.unlink()
+for f in ExtractsDir.glob('*.gz'):  f.unlink()
+
 Vars = [
     'BPL',      # Birthplace
     'MBPL',     # Mother's birthplace
@@ -21,26 +26,30 @@ Vars = [
     'ANCESTR2', # Second-declared ancestry
     'CITIZEN',  # Citizenship status
     'YRIMMIG',  # Year of immigration
-    'SEX',
-    'AGE',
-    'RELATE',   # Relation to head of household
-    'MARST',    # Marital status
-    'LIT',      # Literacy
-    'LABFORCE', # Labor force indicator
-    'OCC',      # Occupation
-    'OCC1950',  # Harmonized 1950 occupation codes
-    'IND1950',  # Harmonized 1950 Industry
-    'OCCSCORE', # Occupational score
-    'SEI',      # Duncan socioeconomic index
-    'PRESGL',   # Occupational prestige, Siegel
-    'ERSCOR50', # Occupational earnings score (harmonize 1950)
-    'EDSCOR50', # Occupational education score (harmonize 1950)
-    'NPBOSS50',  # Nam-Powers-Boyd occupational status score (harmonize 1950)
-    'RACE'      # Race
+    'STATEFIP', 
+    'STATEICP', 
+    'COUNTYICP',
+    'COUNTYFIP',
+    'COUNTYNHG', 
+    'CNTYGP97', 
+    'CNTYGP98',
+    'PUMA'
 ]
 
 # Sample list - names of samples in IPUMS can be found at: https://usa.ipums.org/usa-action/samples/sample_ids
-Samps = ['us1870a', 'us1880a', 'us1900k', 'us1910k', 'us1920a', 'us1930a'] + ['us' + str(year) + 'a' for year in range(1970,2010,10)]
+# I download the same sample as Burchardi et. al. (2019), see table 1 in the appendix
+Samps = [
+    'us1880d',
+    'us1900j',
+    'us1910k',
+    'us1920a',
+    'us1930b',
+    'us1970c',
+    'us1980a',
+    'us1990a',
+    'us2000a',
+    'us2010a'
+]
 
 # Loop through these sample and create extracts
 for samp in Samps:
@@ -61,6 +70,26 @@ for samp in Samps:
                 raise
             print(f'Sample {samp}: dropping unavailable variables: {unavailable}')
             samp_vars = [v for v in samp_vars if v not in unavailable]
+
+
+# %% ################################ SAVE EACH OF THE EXTRACTS AS DTA ################################
+
+# Create a list of files to read through
+Files = list(ExtractsDir.glob("*.xml"))
+
+# Loop through files and save as stata dta
+for f in Files:
+
+    ddi = readers.read_ipums_ddi(f)
+    df  = readers.read_microdata(ddi, ExtractsDir / ddi.file_description.filename)
+
+    print('\n*************************************************************\n' +
+          f'Saving file {f}, sample ' + str(df['YEAR'][0]) +
+          '\n*************************************************************\n')
+    
+    name = 'Acs' + str(df['YEAR'][0]) + '.dta'
+    df.to_stata(ExtractsDir / name, write_index = False)
+
 
 
 # %%
