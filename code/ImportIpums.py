@@ -26,6 +26,7 @@ Vars = [
     'ANCESTR2', # Second-declared ancestry
     'CITIZEN',  # Citizenship status
     'YRIMMIG',  # Year of immigration
+    'MIGPLAC5', # STATE or country of residence 5Y ago
     'STATEFIP', 
     'STATEICP', 
     'COUNTYICP',
