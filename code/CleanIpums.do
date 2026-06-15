@@ -90,13 +90,14 @@ if `cleanperiod1' {
 
             * Generate foreign indicator - not born in the US
             gen foreign = substr(bpl, 1, 1) != "0"
+            gen domestic = 1 - foreign
 
             * Tidy up the presentation of the dataframe
             drop BPLD MBPLD FBPLD
             order county year
 
             * Aggregate to county-year-bpl level, get immigrant counts
-            collapse (sum) imm foreign [aw = perwt], by(year county bpl)
+            collapse (sum) imm foreign domestic [aw = perwt], by(year county bpl)
 
             * Transition these counties into 1990 equivalents
             frame create county_trans
@@ -118,11 +119,12 @@ if `cleanperiod1' {
             * Divvy up the variables among 1990 counties
             reshape long  state_county_, i(county year bpl) j(countyfip) string
             gen foreign_divvied = state_county_ * foreign
+            gen domestic_divvied = state_county * domestic
             gen imm_divvied     = state_county_ * imm
-            drop state_county_ foreign imm
+            drop state_county_ foreign domestic imm
 
-            collapse (sum) foreign_divvied imm_divvied, by(year countyfip bpl)
-            ren (foreign_divvied imm_divvied) (foreign imm)
+            collapse (sum) foreign_divvied imm_divvied domestic_divvied, by(year countyfip bpl)
+            ren (foreign_divvied domestic_divvied imm_divvied) (foreign domestic imm)
 
             frame old: xframeappend default
 
