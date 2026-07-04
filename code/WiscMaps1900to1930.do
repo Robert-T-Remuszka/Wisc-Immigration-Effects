@@ -122,5 +122,17 @@ frame maps {
             frame drop _maptmp
 
         }
+
+        * Combine the four maps for 1900 into a single 2x2 grid
+        if `yr' == 1900 {
+
+            loc combined_graphs
+            foreach bpl_code of local top_bpls {
+                loc combined_graphs `combined_graphs' g`yr'_`bpl_code'
+            }
+
+            graph combine `combined_graphs', cols(2) name(g`yr'_combined, replace)
+            graph export "../output/graphs/g`yr'_combined.pdf", replace name(g`yr'_combined)
+        }
     }
 }
