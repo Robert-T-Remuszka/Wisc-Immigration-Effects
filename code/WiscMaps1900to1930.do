@@ -1,6 +1,9 @@
 clear all
 do globals
 
+* Set graphics on if you wish to see the output in the stata window
+set graphics off
+
 use "${data}/ImmigrationFlows1900to1930.dta", clear
 sort county year bpl
 
@@ -21,7 +24,7 @@ merge m:1 year countyfip using `totdom', nogen
 
 * Compute foreign-born shares
 gen pop   = domestic + foreign
-gen share = (foreign / pop)
+gen share = foreign / pop
 
 * Organize the data
 order countyfip year bpl
@@ -50,10 +53,12 @@ restore
 
 * ---- Copy cleaning frame and map ----
 frame copy default maps
+loc startyearold 1900
+loc endyearold   1930
 
 frame maps {
 
-    forv yr = 1900(10)1900 {
+    forv yr = `startyearold'(10)`endyearold' {
 
         * Top N groups in Wisconsin this year by total immigrant count
         preserve
@@ -99,11 +104,11 @@ frame maps {
                     if ST != "02" & ST != "15",     ///
                     id(_ID)                         ///
                     clmethod(quantile) clnumber(5)  ///
-                    fcolor("222 235 247%70" "158 202 225%70" "107 174 214%70" "49 130 189%70" "8 81 156%70") ///
+                    fcolor("243 205 206%50" "232 155 158%50" "220 105 109%50" "209 55 61%50" "197 5 12%50") /// CROWE badgerred (197 5 12)
                     ocolor("0 0 0%50" ..)            ///
                     osize(vvthin ..)                ///
                     ndfcolor(gs14) ndocolor(none)   ///
-                    title("Share born in `oname', `yr'") ///
+                    title("Residents from `oname', Year `yr' (per one million)") ///
                     legend(pos(5) size(2.5) title("Per million", size(2.5)) ///
                         label(2 "`mn' - `b1'")  label(3 "`b1' - `b2'")    ///
                         label(4 "`b2' - `b3'")  label(5 "`b3' - `b4'")    ///
