@@ -108,8 +108,8 @@ frame maps {
                     ocolor("0 0 0%50" ..)            ///
                     osize(vvthin ..)                ///
                     ndfcolor(gs14) ndocolor(none)   ///
-                    title("Residents from `oname', Year `yr' (per one million)") ///
-                    legend(pos(5) size(2.5) title("Per million", size(2.5)) ///
+                    title("`oname'") ///
+                    legend(position(6) ring(1) rows(1) size(1.6) title("", size(1.6)) ///
                         label(2 "`mn' - `b1'")  label(3 "`b1' - `b2'")    ///
                         label(4 "`b2' - `b3'")  label(5 "`b3' - `b4'")    ///
                         label(6 "`b4' - `mx'")) ///
