@@ -284,5 +284,9 @@ if `cleanperiod2' {
 
         * Get country names
         merge m:1 bpl using "${data}/BplCodes.dta", keep(1 3) nogen
+
+        * Save
+        compress
+        save "${data}/ImmigrationFlows1970to2010.dta", replace
     }
 }
