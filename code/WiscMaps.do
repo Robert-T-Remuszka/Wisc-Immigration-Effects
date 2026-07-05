@@ -5,6 +5,7 @@ do globals
 set graphics off
 
 use "${data}/ImmigrationFlows1900to1930.dta", clear
+append using "${data}/ImmigrationFlows1970to2010.dta"
 sort county year bpl
 
 * Compute number of domestics in each county
@@ -53,12 +54,11 @@ restore
 
 * ---- Copy cleaning frame and map ----
 frame copy default maps
-loc startyearold 1900
-loc endyearold   1930
+loc maptyears 1900 1910 1920 1930 1970
 
 frame maps {
 
-    forv yr = `startyearold'(10)`endyearold' {
+    foreach yr of local maptyears {
 
         * Top N groups in Wisconsin this year by total immigrant count
         preserve
@@ -124,7 +124,7 @@ frame maps {
         }
 
         * Combine the four maps for 1900 into a single 2x2 grid
-        if `yr' == 1900 {
+        if inlist(`yr', 1900, 1970) {
 
             loc combined_graphs
             foreach bpl_code of local top_bpls {
