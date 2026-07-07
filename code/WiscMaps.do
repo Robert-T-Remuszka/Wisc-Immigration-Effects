@@ -91,28 +91,42 @@ frame maps {
 
                 replace share = round(share * 1e+6)
 
-                * Compute quantile break points for legend labels
+                * Counties with a genuine zero share get their own break so they don't
+                * get absorbed into (and visually vanish inside) the bottom quantile bin.
+                * True missing (unmerged) counties remain "No data" via ndfcolor below.
                 qui sum share if !missing(share)
-                local mn = string(r(min), "%12.0fc")
                 local mx = string(r(max), "%12.0fc")
-                qui _pctile share if !missing(share), p(20 40 60 80)
-                forv q = 1/4 {
-                    local b`q' = string(r(r`q'), "%12.0fc")
+                local b5_num = r(max)
+
+                qui _pctile share if !missing(share) & share > 0, p(25 50 75)
+                local p1 = string(r(r1), "%12.0fc")
+                local p2 = string(r(r2), "%12.0fc")
+                local p3 = string(r(r3), "%12.0fc")
+                local b2_num = r(r1)
+                local b3_num = r(r2)
+                local b4_num = r(r3)
+
+                * Enforce strictly increasing break points (protects against ties
+                * when a group has very few counties with positive shares)
+                local b1_num = 0.5
+                foreach i in 2 3 4 5 {
+                    local j = `i' - 1
+                    if (`b`i'_num' <= `b`j'_num') local b`i'_num = `b`j'_num' + 1e-6
                 }
 
                 spmap share using "${data}/shapefiles/co99_d90_shp.dta"    ///
                     if ST != "02" & ST != "15",     ///
                     id(_ID)                         ///
-                    clmethod(quantile) clnumber(5)  ///
-                    fcolor("243 205 206%50" "232 155 158%50" "220 105 109%50" "209 55 61%50" "197 5 12%50") /// CROWE badgerred (197 5 12)
+                    clmethod(custom) clbreaks(0 `b1_num' `b2_num' `b3_num' `b4_num' `b5_num') ///
+                    fcolor("222 226 230%80" "232 155 158%50" "220 105 109%50" "209 55 61%50" "197 5 12%50") /// CROWE badgerred (197 5 12); first color is the "zero" bin
                     ocolor("0 0 0%50" ..)            ///
                     osize(vvthin ..)                ///
                     ndfcolor(gs14) ndocolor(none)   ///
                     title("`oname'") ///
                     legend(position(6) ring(1) rows(1) size(1.6) title("", size(1.6)) ///
-                        label(2 "`mn' - `b1'")  label(3 "`b1' - `b2'")    ///
-                        label(4 "`b2' - `b3'")  label(5 "`b3' - `b4'")    ///
-                        label(6 "`b4' - `mx'")) ///
+                        label(2 "0")  label(3 "1 - `p1'")    ///
+                        label(4 "`p1' - `p2'")  label(5 "`p2' - `p3'")    ///
+                        label(6 "`p3' - `mx'")) ///
                     name(g`yr'_`bpl_code')
 
                 graph export "../output/graphs/g`yr'_`bpl_code'.pdf", ///
@@ -123,8 +137,8 @@ frame maps {
 
         }
 
-        * Combine the four maps for 1900 into a single 2x2 grid
-        if inlist(`yr', 1900, 1970) {
+        * Combine the four maps for 1900, 1920, and 1970 into a single 2x2 grid
+        if inlist(`yr', 1900, 1920, 1970) {
 
             loc combined_graphs
             foreach bpl_code of local top_bpls {
