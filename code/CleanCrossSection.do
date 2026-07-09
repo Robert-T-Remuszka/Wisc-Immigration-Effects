@@ -138,7 +138,7 @@ frame MigFlows {
 
 // all unmatched were from using (to be expected, 2,315)
 merge m:1 county_1990 using `BAndImm', keep(3) nogen
-save "${data}/AnalysisFile1930.dta", clear
+save "${data}/AnalysisFile1930.dta", replace
 
 /*************
 2000 Census
