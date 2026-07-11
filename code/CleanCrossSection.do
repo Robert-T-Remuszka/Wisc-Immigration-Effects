@@ -210,7 +210,7 @@ frame County_Cross {
 }
 
 * All observations matched
-merge m:1 countygroup_2000 using `burch', nogen
+merge m:1 countygroup_2000 using `burch', nogen keep(3)
 
 * Merge in the flows from 1920-1930
 frame create MigFlows
