@@ -139,9 +139,130 @@ frame MigFlows {
 // all unmatched were from using (to be expected, 2,315)
 merge m:1 county_1990 using `BAndImm', keep(3) nogen
 save "${data}/AnalysisFile1930.dta", replace
+frame drop MigFlows
 
 /*************
 2000 Census
 *************/
+use "${Ipums}/CrossSections/Acs2000.dta", clear
 
+* Lowercase variable names
+qui ds
+foreach v in `r(varlist)' {
 
+    loc newname = strlower("`v'")
+    ren `v' `newname'
+}
+
+* Drop some of the extra vars, including the detailed "D" companion codes
+* IPUMS auto-attaches alongside bpl/mbpl/fbpl/empstat/classwkr/race
+drop sample serial cluster strata bpld empstatd classwkrd raced
+
+* Recode IPUMS's own missing/NIU/unknown/illegible sentinel codes to Stata
+* missing, so downstream cleaning can just use missing()/mvdecode logic
+* instead of re-remembering these codes. Codes taken from this extract's own
+* codebook (usa_00400.xml), not guessed from memory.
+mvdecode sex,       mv(9)
+mvdecode age,       mv(999)
+mvdecode stateicp,  mv(99)
+mvdecode statefip,  mv(99)
+mvdecode bpl,       mv(997 999)
+mvdecode citizen,   mv(0 5 8 9)
+mvdecode yrimmig,   mv(0 996)
+mvdecode empstat,   mv(0 9)
+mvdecode classwkr,  mv(0 9)
+mvdecode occ1950,   mv(997 999)
+mvdecode ind1950,   mv(0 998 999)
+mvdecode occscore,  mv(0)
+mvdecode sei,       mv(0)
+
+* Setting the sample
+drop if age < 16 | missing(age)
+drop if !inlist(gq, 1, 2)
+drop if mi(empstat) | empstat == 3 // Keep only those people who are in the labor force
+
+* Bring in the 1990 county equivalent from Burchardi
+tostring statefip puma, replace
+replace statefip = "0" + statefip if strlen(statefip) == 1
+replace puma = "0" + puma if strlen(puma) == 3
+gen countygroup_2000 = statefip + puma
+
+frame create County_Cross
+frame County_Cross {
+
+    use "${data}/CountyTransitions/TransitionMatrix_CountyGroup_2000.dta", clear
+
+    tostring countygroup_2000, replace
+    replace countygroup_2000 = "0" + countygroup if strlen(countygroup) == 5
+
+    reshape long state_county_, i(countygroup_2000) j(county_1990) s
+
+    * Keep the modal county
+    bys countygroup_2000 (state_county_): keep if _n == _N
+
+    replace county_1990 = "0" + county_1990 if strlen(county_1990) == 5
+
+    drop state_county_
+
+    tempfile burch
+    save `burch', replace
+
+}
+
+* All observations matched
+merge m:1 countygroup_2000 using `burch', nogen
+
+* Merge in the flows from 1920-1930
+frame create MigFlows
+frame MigFlows {
+
+    use "${data}/ImmigrationFlows1970to2000.dta", clear
+    ren countyfip county_1990
+    order county_1990 bpl origin year
+    sort county_1990 bpl year
+
+    * Compute totals for each county
+    egen totforeign = total(foreign), by(year county_1990)
+    egen totdomestic = total(domestic), by(year county_1990)
+    egen totimm = total(imm), by(year county_1990)
+    gen pop = totforeign + totdomestic
+    gen share = foreign / pop
+
+    * Create constant 1900 shares
+    bys county_1990 bpl (year): gen s_1970 = share if year == 1970
+    egen s_1970_fill = min(s_1970), by(county_1990 bpl)
+    drop s_1970
+    ren s_1970_fill s_1970
+    replace s_1970 = 0 if mi(s_1970)
+
+    * Compute total immigrate rate
+    bys county_1990 bpl (year): gen PopL1 = pop[_n-1]
+    bys county_1990 bpl (year): gen foreignL1 = foreign[_n-1]
+    gen TotImmRate = totimm / PopL1
+
+    * For each bpl, year compute total imm and total pop outside the state
+    gen state = substr(county_1990, 1, 2)
+    egen immagg = total(imm), by(year bpl)         // national immigration
+    egen stateimm = total(imm), by(year bpl state) // state immigration
+    gen immLo = immagg - stateimm                  // total immigration with own state left out
+    egen foreignagg = total(foreignL1), by(year bpl) // national foreign stock by birthplace
+    egen foreignsta = total(foreignL1), by(year bpl state) // the state's own stock by bithplace
+    gen foreignLo = foreignagg - foreignsta
+    gen immrateLo = immLo / foreignLo
+
+    sort county year bpl
+
+    keep if year == 2000
+
+    * Compute Bartik
+    gen bartik_term = s_1970 * immrateLo
+    collapse (sum) BartikLo = bartik_term  (mean) TotImmRate pop totforeign, by(county_1990 year)
+
+    tempfile BAndImm
+    save `BAndImm', replace
+
+}
+
+// all unmatched were from using (2,123)
+merge m:1 county_1990 using `BAndImm', keep(3) nogen
+save "${data}/AnalysisFile2000.dta", replace
